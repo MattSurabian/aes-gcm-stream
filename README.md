@@ -63,3 +63,6 @@ will be output. Prior to the stream being flushed only the nonce will be output.
 example file](https://github.com/MattSurabian/aes-gcm-stream/blob/master/examples/with-strings.js) shows this in detail.
 
 If you're using `pipe` then flushing will happen automatically. See the [with-a-file.js example](https://github.com/MattSurabian/aes-gcm-stream/blob/master/examples/with-a-file.js) for more.
+
+## Contributing
+Issues and pull requests are welcome! If you're interested in opening a PR please ensure `jscs` and `jshint` compliance.
