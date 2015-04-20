@@ -11,7 +11,8 @@
   ],
   "main": "index.js",
   "scripts": {
-    "test": "node test.js | tspec"
+    "test": "npm run lint && node test.js | tspec",
+    "lint": "jscs index.js test.js examples/ && jshint index.js test.js examples/"
   },
   "repository": {
     "type": "git",
@@ -33,6 +34,8 @@
   ],
   "license": "MIT",
   "devDependencies": {
+    "jscs": "^1.12.0",
+    "jshint": "^2.7.0",
     "tap-spec": "^3.0.0",
     "tape": "^4.0.0"
   }
