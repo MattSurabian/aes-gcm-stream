@@ -4,6 +4,9 @@
   "description": "A dependency free NodeJS module that implements AES256 GCM encryption and decryption as transform streams.",
   "author": "Matt Surabian <matt@mattsurabian.com>",
   "main": "index.js",
+  "scripts": {
+    "test": "node test.js | tspec"
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/mattsurabian/aes-gcm-stream"
@@ -22,5 +25,9 @@
     "encryption",
     "aes-256-gcm"
   ],
-  "license": "MIT"
+  "license": "MIT",
+  "devDependencies": {
+    "tap-spec": "^3.0.0",
+    "tape": "^4.0.0"
+  }
 }
