@@ -117,12 +117,12 @@ MixingStream.prototype._transform = function(chunk, _, next) {
   var end = chunk.slice(mid);
   this.previous = end;
   if (previous) {
-    this.push(Buffer.concat([previous, start]))
+    this.push(Buffer.concat([previous, start]));
   } else {
     this.push(start);
   }
   next();
-}
+};
 
 MixingStream.prototype._flush = function(next) {
   if (this.previous) {
