@@ -79,8 +79,8 @@ exports.createSalt = function(length) {
  */
 exports.createKeyBuffer = function() {
   try {
-    var passphrase = crypto.randomBytes(PBKDF2_PASS_LENGTH).toString('binary');
-    var salt = this.createSalt(PBKDF2_SALT_LENGTH).toString('binary');
+    var passphrase = crypto.randomBytes(PBKDF2_PASS_LENGTH);
+    var salt = this.createSalt(PBKDF2_SALT_LENGTH);
     return crypto.pbkdf2Sync(passphrase, salt, PBKDF2_ITERATIONS, KEY_LENGTH, PBKDF2_DIGEST);
   } catch (ex) {
     console.error('Problem reading random data and generating a key!');
@@ -136,9 +136,7 @@ EncryptionStream.prototype._transform = function(chunk, enc, cb) {
 
   this._cipherTextChunks.push(this._cipher.update(chunk));
 
-  if (typeof(cb) === 'function') {
-    cb();
-  }
+  cb();
 };
 
 EncryptionStream.prototype._flush = function(cb) {
@@ -151,9 +149,7 @@ EncryptionStream.prototype._flush = function(cb) {
     this.push(this._cipherTextChunks.shift());
   }
 
-  if (typeof(cb) === 'function') {
-    cb();
-  }
+  cb();
 };
 
 
@@ -218,7 +214,6 @@ DecryptionStream.prototype._transform = function(chunk, enc, cb) {
     this.push(this._decipher.update(chunk));
   }
 
-  if (typeof(cb) === 'function') {
-    cb();
-  }
+
+  cb();
 };
