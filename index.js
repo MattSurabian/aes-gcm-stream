@@ -194,15 +194,44 @@ DecryptionStream.prototype._transform = function(chunk, enc, cb) {
 };
 
 DecryptionStream.prototype._flush = function(cb) {
-  var data = Buffer.concat(this._cipherTextChunks);// this could be rewritten to avoid doing this
-  var mac = data.slice(-GCM_MAC_LENGTH);
+  var mac = pullOutMac(this._cipherTextChunks);
+  if (!mac) {
+    return this.emit('error', new Error('Decryption failed: bad cipher text.'));
+  }
   this._decipher.setAuthTag(mac);
-  var decrypted = this._decipher.update(data.slice(0, -GCM_MAC_LENGTH));
+  var decrypted = this._cipherTextChunks.map(function(item) {
+    return this._decipher.update(item);
+  }, this);
   try {
     this._decipher.final();
   } catch (e) {
     return cb(e);
   }
-  this.push(decrypted);
+  decrypted.forEach(function(item) {
+    this.push(item);
+  }, this);
   cb();
 };
+
+function pullOutMac(array) {
+  var macBits = [];
+  var macSoFar = 0;
+  var current, macStartIndex;
+  while (macSoFar !== GCM_MAC_LENGTH && array.length) {
+    current = array.pop();
+    if (macSoFar + current.length <= GCM_MAC_LENGTH) {
+      macBits.push(current);
+      macSoFar += current.length;
+    } else {
+      macStartIndex = (macSoFar + current.length) - GCM_MAC_LENGTH;
+      macBits.push(current.slice(macStartIndex));
+      array.push(current.slice(0, macStartIndex));
+      macSoFar += (current.length - macStartIndex);
+    }
+  }
+  if (macSoFar !== GCM_MAC_LENGTH) {
+    return;
+  }
+  macBits.reverse();
+  return Buffer.concat(macBits, GCM_MAC_LENGTH);
+}
