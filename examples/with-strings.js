@@ -1,6 +1,7 @@
 /**
  * This example shows how to use AES GCM Stream with strings.
  */
+'use strict';
 
 var aesgcm = require('../index.js');
 

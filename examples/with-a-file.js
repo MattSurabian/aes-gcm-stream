@@ -1,6 +1,7 @@
 /**
  * This example shows how to use AES GCM Stream with files.
  */
+'use strict';
 
 var fs = require('fs');
 var aesgcm = require('../index.js');

@@ -1,6 +1,8 @@
 /**
  * This example shows how to use AES GCM Stream with a key file on disk.
  */
+'use strict';
+
 var fs = require('fs');
 var aesgcm = require('../index.js');
 var keyfilePath = './keyfile';
