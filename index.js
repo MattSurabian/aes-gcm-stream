@@ -112,10 +112,6 @@ function EncryptionStream(options) {
     return new EncryptionStream(options);
   }
 
-  // It stinks the we have to store all the
-  // encrypted chunks in memory but such is life
-  this._cipherTextChunks = [];
-
   this._started = false;
   this._nonce = options.nonce || exports.createSalt(12);
 
@@ -134,20 +130,15 @@ EncryptionStream.prototype._transform = function(chunk, enc, cb) {
     this.push(this._nonce);
   }
 
-  this._cipherTextChunks.push(this._cipher.update(chunk));
+  this.push(this._cipher.update(chunk));
 
   cb();
 };
 
 EncryptionStream.prototype._flush = function(cb) {
   // final must be called on the cipher before generating a MAC
-  this._cipherTextChunks.push(this._cipher.final());
-  var mac = this._cipher.getAuthTag();
-  this.push(mac); // 16 bytes
-
-  for (var i = 0; i< this._cipherTextChunks.length; i++) {
-    this.push(this._cipherTextChunks.shift());
-  }
+  this._cipher.final(); // this will never output data
+  this.push(this._cipher.getAuthTag()); // 16 bytes
 
   cb();
 };
@@ -168,10 +159,8 @@ function DecryptionStream(options) {
 
   this._started = false;
   this._nonce = new Buffer(12);
-  this._mac = new Buffer(16);
   this._nonceBytesRead = 0;
-  this._macBytesRead = 0;
-
+  this._cipherTextChunks = [];
   if (validateKey(options.key)) {
     this._key = options.key;
   }
@@ -193,17 +182,10 @@ DecryptionStream.prototype._transform = function(chunk, enc, cb) {
       this._nonceBytesRead += chunkOffset;
     }
 
-    if (this._macBytesRead < GCM_MAC_LENGTH) {
-      var macRemaining = GCM_MAC_LENGTH - this._macBytesRead;
-      chunkOffset = chunkLength <= macRemaining ? chunkLength : macRemaining;
-      chunk.copy(this._mac, this._macBytesRead, 0, chunkOffset);
-      chunk = chunk.slice(chunkOffset);
-      this._macBytesRead += chunkOffset;
-    }
 
-    if (this._nonceBytesRead === GCM_NONCE_LENGTH && this._macBytesRead === GCM_MAC_LENGTH) {
+    if (this._nonceBytesRead === GCM_NONCE_LENGTH) {
       this._decipher = crypto.createDecipheriv('aes-256-gcm', this._key, this._nonce);
-      this._decipher.setAuthTag(this._mac);
+
       this._started = true;
     }
   }
@@ -211,9 +193,23 @@ DecryptionStream.prototype._transform = function(chunk, enc, cb) {
   // We can't use an else because we have no idea how long our chunks will be
   // all we know is that once we've got a nonce and mac decryption can begin
   if (this._started) {
-    this.push(this._decipher.update(chunk));
+    this._cipherTextChunks.push(this._decipher.update(chunk));
   }
 
 
+  cb();
+};
+
+DecryptionStream.prototype._flush = function(cb) {
+  var data = Buffer.concat(this._cipherTextChunks);// this could be rewritten to avoid doing this
+  var mac = data.slice(-16);
+  this._decipher.setAuthTag(mac);
+  var decrypted = this._decipher.update(data);
+  try {
+    this._decipher.final();
+  } catch(e) {
+    return cb(e);
+  }
+  this.push(decrypted);
   cb();
 };
