@@ -215,21 +215,21 @@ DecryptionStream.prototype._flush = function(cb) {
 
 function pullOutMac(array) {
   var macBits = [];
-  var macSoFar = 0;
+  var macByteCount = 0;
   var current, macStartIndex;
-  while (macSoFar !== GCM_MAC_LENGTH && array.length) {
+  while (macByteCount !== GCM_MAC_LENGTH && array.length) {
     current = array.pop();
-    if (macSoFar + current.length <= GCM_MAC_LENGTH) {
+    if (macByteCount + current.length <= GCM_MAC_LENGTH) {
       macBits.push(current);
-      macSoFar += current.length;
+      macByteCount += current.length;
     } else {
-      macStartIndex = (macSoFar + current.length) - GCM_MAC_LENGTH;
+      macStartIndex = (macByteCount + current.length) - GCM_MAC_LENGTH;
       macBits.push(current.slice(macStartIndex));
       array.push(current.slice(0, macStartIndex));
-      macSoFar += (current.length - macStartIndex);
+      macByteCount += (current.length - macStartIndex);
     }
   }
-  if (macSoFar !== GCM_MAC_LENGTH) {
+  if (macByteCount !== GCM_MAC_LENGTH) {
     return;
   }
   macBits.reverse();
