@@ -1,8 +1,14 @@
 {
   "name": "aes-gcm-stream",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "description": "A dependency free NodeJS module that implements AES256 GCM encryption and decryption as transform streams.",
   "author": "Matt Surabian <matt@mattsurabian.com>",
+  "contributors": [
+    {
+      "name": "Calvin Metcalf",
+      "email": "calvin.metcalf@gmail.com"
+    }
+  ],
   "main": "index.js",
   "scripts": {
     "test": "node test.js | tspec"
