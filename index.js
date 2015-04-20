@@ -112,26 +112,20 @@ function EncryptionStream(options) {
     return new EncryptionStream(options);
   }
 
-  this._started = false;
-  this._nonce = options.nonce || exports.createSalt(12);
+  var nonce = options.nonce || exports.createSalt(12);
 
   if (validateKey(options.key)) {
     this._key = options.key;
-    this._cipher = crypto.createCipheriv('aes-256-gcm', this._key, this._nonce);
+    this._cipher = crypto.createCipheriv('aes-256-gcm', this._key, nonce);
   }
 
   Transform.call(this, options);
+  this.push(nonce);
 }
 util.inherits(EncryptionStream, Transform);
 
 EncryptionStream.prototype._transform = function(chunk, enc, cb) {
-  if (!this._started) {
-    this._started = true;
-    this.push(this._nonce);
-  }
-
   this.push(this._cipher.update(chunk));
-
   cb();
 };
 
@@ -193,7 +187,7 @@ DecryptionStream.prototype._transform = function(chunk, enc, cb) {
   // We can't use an else because we have no idea how long our chunks will be
   // all we know is that once we've got a nonce and mac decryption can begin
   if (this._started) {
-    this._cipherTextChunks.push(this._decipher.update(chunk));
+    this._cipherTextChunks.push(chunk);
   }
 
 
@@ -204,7 +198,7 @@ DecryptionStream.prototype._flush = function(cb) {
   var data = Buffer.concat(this._cipherTextChunks);// this could be rewritten to avoid doing this
   var mac = data.slice(-16);
   this._decipher.setAuthTag(mac);
-  var decrypted = this._decipher.update(data);
+  var decrypted = this._decipher.update(data.slice(0, -16));
   try {
     this._decipher.final();
   } catch(e) {
