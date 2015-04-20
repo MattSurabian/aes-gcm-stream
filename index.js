@@ -196,7 +196,7 @@ DecryptionStream.prototype._transform = function(chunk, enc, cb) {
 DecryptionStream.prototype._flush = function(cb) {
   var mac = pullOutMac(this._cipherTextChunks);
   if (!mac) {
-    return this.emit('error', new Error('insufficient data'));
+    return this.emit('error', new Error('Decryption failed: bad cipher text.'));
   }
   this._decipher.setAuthTag(mac);
   var decrypted = this._cipherTextChunks.map(function(item) {
@@ -216,17 +216,17 @@ DecryptionStream.prototype._flush = function(cb) {
 function pullOutMac(array) {
   var macBits = [];
   var macSoFar = 0;
-  var current, overflow;
+  var current, macStartIndex;
   while (macSoFar !== GCM_MAC_LENGTH && array.length) {
     current = array.pop();
     if (macSoFar + current.length <= GCM_MAC_LENGTH) {
       macBits.push(current);
       macSoFar += current.length;
     } else {
-      overflow = (macSoFar + current.length) - GCM_MAC_LENGTH;
-      macBits.push(current.slice(overflow));
-      array.push(current.slice(0, overflow));
-      macSoFar += (current.length - overflow);
+      macStartIndex = (macSoFar + current.length) - GCM_MAC_LENGTH;
+      macBits.push(current.slice(macStartIndex));
+      array.push(current.slice(0, macStartIndex));
+      macSoFar += (current.length - macStartIndex);
     }
   }
   if (macSoFar !== GCM_MAC_LENGTH) {
