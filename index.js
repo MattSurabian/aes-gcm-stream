@@ -101,8 +101,8 @@ exports.createEncodedKey = function() {
 /**
  * EncryptionStream
  * A constructor which returns an encryption stream
- * The stream first outputs a 12 byte nonce then a 16 byte MAC
- * Finally the stream outputs all the cipher text generated from the streamed in data.
+ * The stream first outputs a 12 byte nonce then encrypted cipher text.
+ * When the stream is flushed it outputs a 16 byte MAC.
  * @param options Object Object.key is the only required param
  * @returns {EncryptionStream}
  * @constructor
@@ -141,7 +141,8 @@ EncryptionStream.prototype._flush = function(cb) {
 /**
  * DecryptionStream
  * A constructor which returns a decryption stream
- * The stream assumes the first 28 bytes of data are the nonce followed by the MAC
+ * The stream assumes the first 12 bytes of data are the nonce and the final
+ * 16 bytes received is the MAC.
  * @param options Object Object.key is the only required param
  * @returns {DecryptionStream}
  * @constructor
@@ -152,7 +153,7 @@ function DecryptionStream(options) {
   }
 
   this._started = false;
-  this._nonce = new Buffer(12);
+  this._nonce = new Buffer(GCM_NONCE_LENGTH);
   this._nonceBytesRead = 0;
   this._cipherTextChunks = [];
   if (validateKey(options.key)) {
@@ -179,29 +180,27 @@ DecryptionStream.prototype._transform = function(chunk, enc, cb) {
 
     if (this._nonceBytesRead === GCM_NONCE_LENGTH) {
       this._decipher = crypto.createDecipheriv('aes-256-gcm', this._key, this._nonce);
-
       this._started = true;
     }
   }
 
   // We can't use an else because we have no idea how long our chunks will be
-  // all we know is that once we've got a nonce and mac decryption can begin
+  // all we know is that once we've got a nonce we can start storing cipher text
   if (this._started) {
     this._cipherTextChunks.push(chunk);
   }
-
 
   cb();
 };
 
 DecryptionStream.prototype._flush = function(cb) {
   var data = Buffer.concat(this._cipherTextChunks);// this could be rewritten to avoid doing this
-  var mac = data.slice(-16);
+  var mac = data.slice(-GCM_MAC_LENGTH);
   this._decipher.setAuthTag(mac);
-  var decrypted = this._decipher.update(data.slice(0, -16));
+  var decrypted = this._decipher.update(data.slice(0, -GCM_MAC_LENGTH));
   try {
     this._decipher.final();
-  } catch(e) {
+  } catch (e) {
     return cb(e);
   }
   this.push(decrypted);
