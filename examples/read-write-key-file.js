@@ -7,10 +7,10 @@ var fs = require('fs');
 var aesgcm = require('../index.js');
 var keyfilePath = './keyfile';
 
-fs.writeFileSync(keyfilePath, aesgcm.createEncodedKey());
+fs.writeFileSync(keyfilePath, aesgcm.createEncodedKey(), 'utf-8');
 
 // there isn't a helper for reading keys from files because of encoding edge cases
-var key = new Buffer(fs.readFileSync(keyfilePath, 'utf-8'), aesgcm.getKeyEncoding());
+var key = fs.readFileSync(keyfilePath, 'utf-8');
 
 var config = {
   key: key

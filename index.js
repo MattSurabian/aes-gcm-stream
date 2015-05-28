@@ -24,15 +24,31 @@ var GCM_MAC_LENGTH = 16; //bytes
 var keyEncoding = 'base64';
 
 /**
- * Private helper method to validate keys passed into the Encrypt and Decrypt streams
+ * Private helper method to validate a key passed into the Encrypt and Decrypt streams.
+ * Strings are converted it into a buffer, buffers are returned as they are.
  * @param key
- * @returns {boolean}
+ * @throws Missing, Encoding, or Length errors
+ * @returns Buffer
  */
-var validateKey = function(key) {
-  if (key && (key instanceof Buffer || typeof key === 'string')) {
-    return true;
+var validateAndConvertKey = function(key) {
+  if (key && key instanceof Buffer && key.length === KEY_LENGTH) {
+    return key;
+  } else if (key && typeof key === 'string') {
+    // Because we don't have a reliable way to test string encoding, we assume that a string type
+    // key was created by the createEncodedKey method and that it is using the keyEncoding which
+    // has been set on the module, whether that's the default or something explicitly set by the
+    // user via the setKeyEncoding method.
+    var bufKey = new Buffer(key, keyEncoding);
+    if (bufKey.length !== KEY_LENGTH) {
+      var encodingErrorMessage = 'Provided key string is either of an unknown encoding (expected: ' +
+        keyEncoding + ') or the wrong length.';
+      throw new Error(encodingErrorMessage);
+    }
+    return bufKey;
   } else {
-    throw new Error('Key is required! Expected binary encoded string or buffer.');
+    var message = 'The key options property is required! Expected ' +
+      keyEncoding + ' encoded string or a buffer.';
+    throw new Error(message);
   }
 };
 
@@ -114,10 +130,8 @@ function EncryptionStream(options) {
 
   var nonce = options.nonce || exports.createSalt(12);
 
-  if (validateKey(options.key)) {
-    this._key = options.key;
-    this._cipher = crypto.createCipheriv('aes-256-gcm', this._key, nonce);
-  }
+  this._key = validateAndConvertKey(options.key);
+  this._cipher = crypto.createCipheriv('aes-256-gcm', this._key, nonce);
 
   Transform.call(this, options);
   this.push(nonce);
@@ -156,9 +170,7 @@ function DecryptionStream(options) {
   this._nonce = new Buffer(GCM_NONCE_LENGTH);
   this._nonceBytesRead = 0;
   this._cipherTextChunks = [];
-  if (validateKey(options.key)) {
-    this._key = options.key;
-  }
+  this._key = validateAndConvertKey(options.key);
 
   Transform.call(this, options);
 }
